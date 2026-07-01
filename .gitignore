@@ -1,0 +1,21 @@
+# WorkBuddy
+.workbuddy/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+.codebuddy/
+
+# Deploy temp
+deploy/
