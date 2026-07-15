@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>主营业务特征分析 - 43家港股消费企业</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Microsoft YaHei','PingFang SC',sans-serif; background:#f5f7fa; color:#333; }
+
+.header { background:linear-gradient(135deg,#1a3a5c,#2d6a9f); color:#fff; padding:24px 40px; }
+.header h1 { font-size:22px; margin-bottom:6px; }
+.header p { font-size:13px; color:#b8d4e8; }
+
+.container { max-width:1400px; margin:0 auto; padding:20px; }
+
+/* --- Tabs --- */
+.tabs { display:flex; gap:8px; margin-bottom:20px; }
+.tab { padding:10px 20px; border-radius:8px 8px 0 0; background:#e0e7ef; cursor:pointer; font-size:14px; font-weight:600; transition:all .2s; }
+.tab.active { background:#2d6a9f; color:#fff; }
+.tab:hover { background:#2d6a9f; color:#fff; }
+
+.panel { display:none; }
+.panel.active { display:block; }
+
+/* --- Tag Overview --- */
+.category-section { margin-bottom:24px; }
+.category-title { font-size:16px; font-weight:700; padding:8px 16px; color:#fff; border-radius:6px; margin-bottom:12px; }
+.tag-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+.tag-card { background:#fff; border-radius:8px; padding:14px 16px; border:1px solid #dde3ea; cursor:pointer; transition:all .2s; }
+.tag-card:hover { border-color:#2d6a9f; box-shadow:0 2px 8px rgba(45,106,159,.15); transform:translateY(-2px); }
+.tag-card.highlight { border-color:#e74c3c; box-shadow:0 2px 12px rgba(231,76,60,.2); }
+.tag-card.desc-tag { background:#f5f5f5; border-color:#ddd; }
+.tag-card.desc-tag:hover { border-color:#aaa; box-shadow:0 2px 8px rgba(0,0,0,.08); }
+.tag-label { font-size:15px; font-weight:700; }
+.tag-desc { font-size:12px; color:#888; margin-top:4px; }
+.tag-stats { display:flex; align-items:baseline; gap:8px; margin-top:8px; }
+.tag-count { font-size:22px; font-weight:700; }
+.tag-count.industry { color:#e74c3c; }
+.tag-count.desc { color:#999; }
+.tag-pct { font-size:13px; color:#888; }
+.tag-bar { height:6px; background:#e8eef4; border-radius:3px; margin-top:6px; }
+.tag-bar-fill { height:100%; border-radius:3px; }
+.tag-companies { font-size:11px; color:#666; margin-top:6px; line-height:1.4; }
+.tag-companies span { display:inline-block; background:#e8f0f8; padding:2px 6px; border-radius:4px; margin:2px; }
+
+/* --- Word Frequency --- */
+.freq-table { width:100%; border-collapse:collapse; }
+.freq-table th { background:#2d6a9f; color:#fff; padding:8px 12px; font-size:13px; text-align:left; }
+.freq-table td { padding:6px 12px; border-bottom:1px solid #eee; font-size:13px; }
+.freq-table tr:hover { background:#f0f5fa; }
+.freq-bar { display:inline-block; height:14px; background:linear-gradient(90deg,#2d6a9f,#4a90c4); border-radius:2px; vertical-align:middle; }
+.freq-word { font-weight:600; color:#2d6a9f; }
+
+/* --- Company Matrix --- */
+.matrix-controls { margin-bottom:16px; display:flex; gap:12px; align-items:center; }
+.matrix-controls label { font-size:13px; font-weight:600; }
+.matrix-controls select { padding:6px 10px; border-radius:6px; border:1px solid #dde3ea; }
+.matrix-search { padding:6px 12px; border-radius:6px; border:1px solid #dde3ea; width:200px; }
+.matrix-wrapper { overflow-x:auto; max-height:600px; overflow-y:auto; border:1px solid #dde3ea; border-radius:8px; }
+.matrix-table { width:100%; border-collapse:collapse; }
+.matrix-table th { background:#2d6a9f; color:#fff; padding:6px 4px; font-size:11px; text-align:center; position:sticky; top:0; }
+.matrix-table td { padding:4px; border:1px solid #eee; text-align:center; font-size:11px; }
+.matrix-table .company-name { text-align:left; font-weight:600; white-space:nowrap; }
+.matrix-cell { width:14px; height:14px; border-radius:3px; display:inline-block; }
+.cell-on { }
+.cell-off { background:#e8eef4; }
+
+/* --- Company Detail --- */
+.detail-panel { background:#fff; border-radius:8px; padding:20px; margin-top:16px; border:1px solid #dde3ea; }
+.detail-name { font-size:18px; font-weight:700; color:#2d6a9f; }
+.detail-biz { font-size:13px; color:#666; margin-top:8px; line-height:1.5; max-height:100px; overflow-y:auto; background:#f5f7fa; padding:8px 12px; border-radius:6px; }
+.detail-tags { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+.detail-tag { padding:4px 10px; border-radius:6px; font-size:13px; }
+.detail-tag.cat-market { background:#ffe8e8; color:#c0392b; }
+.detail-tag.cat-model { background:#e8ffe8; color:#27ae60; }
+.detail-tag.cat-product { background:#f0f0f0; color:#888; }
+.detail-tag.cat-strategy { background:#e8f0ff; color:#2d6a9f; }
+.detail-tag.cat-chain { background:#f0f0f0; color:#888; }
+.detail-tag.cat-desc { background:#f0f0f0; color:#888; border:1px solid #ddd; }
+
+/* --- Chart --- */
+.chart-container { background:#fff; border-radius:8px; padding:20px; border:1px solid #dde3ea; }
+.bar-row { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+.bar-label { width:130px; font-size:13px; font-weight:600; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bar-value { width:50px; font-size:13px; font-weight:700; color:#e74c3c; text-align:right; }
+.bar-track { flex:1; height:20px; background:#e8eef4; border-radius:4px; position:relative; }
+.bar-fill { height:100%; border-radius:4px; transition:width .3s; }
+
+/* --- Summary Stats --- */
+.stats-row { display:flex; gap:16px; margin-bottom:20px; }
+.stat-card { background:#fff; border-radius:8px; padding:16px 20px; border:1px solid #dde3ea; flex:1; }
+.stat-value { font-size:28px; font-weight:700; color:#2d6a9f; }
+.stat-label { font-size:13px; color:#888; margin-top:4px; }
+
+.legend { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
+.legend-item { display:flex; align-items:center; gap:4px; font-size:12px; }
+.legend-dot { width:12px; height:12px; border-radius:3px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+<h1>主营业务特征分析 · 43家港股消费企业</h1>
+<p>基于jieba中文分词提取关键词词频，定义24个特征标签，统计企业共性特征分布。<span style="background:#fff3;color:#7fb8e2;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:8px">统计口径：每个标签每家企业最多计1次，无论关键词出现多少次；占比=匹配企业数/总企业数(43)</span></p>
+</div>
+
+<div class="container">
+<div class="stats-row">
+<div class="stat-card"><div class="stat-value">43</div><div class="stat-label">样本企业数</div></div>
+<div class="stat-card"><div class="stat-value">24</div><div class="stat-label">匹配到的特征标签</div></div>
+<div class="stat-card"><div class="stat-value" style="color:#2d6a9f">5</div><div class="stat-label">特征大类（3类产业特征 + 2类描述性）</div></div>
+<div class="stat-card"><div class="stat-value" id="avg-tags">--</div><div class="stat-label">平均每家企业匹配标签数</div></div>
+</div>
+
+<div class="tabs" id="tabs">
+<div class="tab active" onclick="switchTab('overview')">特征标签总览</div>
+<div class="tab" onclick="switchTab('chart')">频次排行</div>
+<div class="tab" onclick="switchTab('matrix')">企业×标签矩阵</div>
+<div class="tab" onclick="switchTab('wordfreq')">词频表</div>
+</div>
+
+<!-- Panel 1: Tag Overview -->
+<div class="panel active" id="panel-overview">
+<div class="legend" style="border-bottom:1px solid #dde3ea;padding-bottom:8px;margin-bottom:12px">
+<div style="font-size:12px;font-weight:700;color:#2d6a9f;margin-bottom:4px">产业特征（重点关注）</div>
+<div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>市场特征</div>
+<div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>商业模式</div>
+<div class="legend-item"><div class="legend-dot" style="background:#2d6a9f"></div>战略特征</div>
+</div>
+<div class="legend">
+<div style="font-size:12px;font-weight:700;color:#999;margin-bottom:4px">描述性标签（参考，灰色展示）</div>
+<div class="legend-item"><div class="legend-dot" style="background:#bbb"></div>产品领域</div>
+<div class="legend-item"><div class="legend-dot" style="background:#bbb"></div>价值链</div>
+</div>
+<div id="tag-overview"></div>
+</div>
+
+<!-- Panel 2: Chart -->
+<div class="panel" id="panel-chart">
+<div class="chart-section">
+<div class="chart-container">
+<div class="legend" style="border-bottom:1px solid #dde3ea;padding-bottom:8px;margin-bottom:12px">
+<div style="font-size:12px;font-weight:700;color:#2d6a9f;margin-bottom:4px">产业特征（重点关注）</div>
+<div class="legend-item"><div class="legend-dot" style="background:#c0392b"></div>市场特征</div>
+<div class="legend-item"><div class="legend-dot" style="background:#27ae60"></div>商业模式</div>
+<div class="legend-item"><div class="legend-dot" style="background:#2d6a9f"></div>战略特征</div>
+</div>
+<div class="legend">
+<div style="font-size:12px;font-weight:700;color:#999;margin-bottom:4px">描述性标签（参考，灰色展示）</div>
+<div class="legend-item"><div class="legend-dot" style="background:#bbb"></div>产品领域</div>
+<div class="legend-item"><div class="legend-dot" style="background:#bbb"></div>价值链</div>
+</div>
+<div id="bar-chart"></div>
+</div>
+</div>
+</div>
+
+<!-- Panel 3: Matrix -->
+<div class="panel" id="panel-matrix">
+<div class="matrix-section">
+<div class="matrix-controls">
+<label>筛选类别：</label>
+<select id="filter-category" onchange="filterMatrix()">
+<option value="all">全部</option>
+<option value="市场特征">市场特征</option>
+<option value="商业模式">商业模式</option>
+<option value="产品领域">产品领域</option>
+<option value="战略特征">战略特征</option>
+<option value="价值链">价值链</option>
+</select>
+<input type="text" class="matrix-search" id="matrix-search" placeholder="搜索企业名称..." oninput="filterMatrix()">
+</div>
+<div class="matrix-wrapper" id="matrix-wrapper"></div>
+<div class="detail-panel" id="company-detail" style="display:none"></div>
+</div>
+</div>
+
+<!-- Panel 4: Word Frequency -->
+<div class="panel" id="panel-wordfreq">
+<div id="freq-section"></div>
+</div>
+
+</div>
+
+<script>
+const companies = [{"code": "6715.HK", "name": "鲟龙科技", "full_name": "杭州千岛湖鲟龙科技股份有限公司", "main_biz": "公司是全球最大的鱼子酱企业。公司自2015年以来连续10年实现鱼子酱销量全球第一名。", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "76900.6", "profit_2025": "36502.9", "net_profit_2025": "36339.7", "pe_2025": "/", "net_margin_2025": "0.4726", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.1613", "net_cagr_3y": "0.1649"}, {"code": "6658.HK", "name": "溜溜梅", "full_name": "溜溜梅股份有限公司", "main_biz": "食品生产(包括以青梅为原料的果酒,食品,饮料的生产;水果和坚果加工;果蔬汁及果蔬汁饮料制造;果浆,果酱制造;果冻,糕点,糖果巧克力制品,藻类制品,水果干制品,蔬菜干制品,调味品,发酵制品,蔬菜制品(酱腌菜)的生产,加工;初级农产品销售;预包装食品(含冷藏冷冻食品)销售;文化用品,工艺品(除文物)销售;经济果蔬类农产品种植;梅种苗,梅资源谱研发;自营和代理各类商品和技术的进出口业务(国家限定公司经营或禁止进出口的商品和技术除外).(依法须经批准的项目,经相关部门批准后方可开展经营活动)", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "171073.1", "profit_2025": "18208.8", "net_profit_2025": "18208.8", "pe_2025": "/", "net_margin_2025": "0.1064", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.1337", "net_cagr_3y": "0.3857"}, {"code": "2290.HK", "name": "龙丰集团", "full_name": "龙丰集团控股有限公司", "main_biz": "药品、保健品、护肤品、化妆品、香水、个人护理品、母婴产品、食品、宠物食品及家居日用品等", "wind_ind": "日常消费零售", "hs_ind": "(HS)专业零售", "rev_2025": "227060.29", "profit_2025": "15727.98", "net_profit_2025": "15727.98", "pe_2025": "/", "net_margin_2025": "0.0693", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "/", "net_cagr_3y": "/"}, {"code": "0664.HK", "name": "铜师傅", "full_name": "杭州铜师傅文创(集团)股份有限公司", "main_biz": "一般项目:工艺美术品及礼仪用品制造(象牙及其制品除外);工艺美术品及收藏品批发(象牙及其制品除外);工艺美术品及收藏品零售(象牙及其制品除外);知识产权服务;文具制造;文具用品批发;文具用品零售;体育用品及器材制造;体育用品及器材批发;体育用品及器材零售;珠宝首饰制造;互联网销售(除销售需要许可的商品);货物进出口(除依法须经批准的项目外,凭营业执照依法自主开展经营活动)。", "wind_ind": "耐用消费品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "61733.7", "profit_2025": "4783.8", "net_profit_2025": "4783.8", "pe_2025": "/", "net_margin_2025": "0.0775", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.0705", "net_cagr_3y": "-0.0564"}, {"code": "2720.HK", "name": "乐欣户外", "full_name": "乐欣户外国际有限公司", "main_biz": "(i)床椅及其他配件，如钓鱼椅、钓鱼床、鱼竿支架、钓鱼推车及钓鱼箱；(ii)包袋，如单肩包、钓鱼渔包及鱼竿包；及(iii)帐篷，如渔具篷、社交篷及遮阳篷。", "wind_ind": "耐用消费品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "66247.1", "profit_2025": "7387.1", "net_profit_2025": "7387.1", "pe_2025": "/", "net_margin_2025": "0.1115", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "-0.068", "net_cagr_3y": "-0.116"}, {"code": "9980.HK", "name": "东鹏饮料", "full_name": "东鹏饮料(集团)股份有限公司", "main_biz": "食品机械及包装材料的销售与技术咨询;房屋租赁;电子商务平台技术开发和系统开发,电子政务系统开发;信息传输,软件和信息技术服务;计算机软件,信息系统软件的开发,销售;信息系统设计,集成,运行维护;信息技术咨询;集成电路设计,研发;企业管理咨询(不含限制项目);信息化解决方案开发与应用;高可信计算,智能网络,移动互联网,物联网等技术与应用;基于网络的软件服务平台技术开发,软件的开发,测试服务;信息系统集成,技术咨询.(以上各项涉及法律,行政法规,国务院决定禁止的项目除外,限制的项目须取得许可后方可经营);国内贸易(不含专营,专卖,专控商品);经营进出口业务(法律,行政法规,国务院决定禁止的项目除外,限制的项目须取得许可后方可经营).预包装食品(不含复热预包装食品)批发(饮料,无酒精饮料,包装饮用水);保健食品(限东鹏特饮)批发;普通货运;饮料,无酒精饮料,包装饮用水生产与销售.生产,销售:保健食品,饮料(凭许可证在有效期内经营,具体项目以审批部门批准的为准);酒,精致茶;生产,加工:饮料包装容器;生产,销售瓶(桶)装引用水类(饮用纯净水);生产销售其他饮料(营养素饮料);数据挖掘,数据分析与数据服务;互联网数字内容开发;中药有效成份的提取,纯化及销售.", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "2086601.9", "profit_2025": "441401.8", "net_profit_2025": "441526.3", "pe_2025": "/", "net_margin_2025": "0.2116", "dividend_2025": "/", "cash_div_2025": "0.3273", "cagr_3y": "0.349", "net_cagr_3y": "0.4526"}, {"code": "1768.HK", "name": "鸣鸣很忙", "full_name": "湖南鸣鸣很忙商业连锁股份有限公司", "main_biz": "成熟且稳步发展的食品饮料零售商。", "wind_ind": "可选消费零售", "hs_ind": "(HS)食物饮品", "rev_2025": "6617033.6", "profit_2025": "232914.1", "net_profit_2025": "232914.1", "pe_2025": "/", "net_margin_2025": "0.0352", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "1.4901", "net_cagr_3y": "2.1915"}, {"code": "2657.HK", "name": "林清轩", "full_name": "上海林清轩化妆品集团股份有限公司", "main_biz": "技术服务、技术开发、技术咨询、技术交流、技术转让、技术推广;货物进出口、技术进出口;日用化学产品制造;第二类医疗器械销售;化妆品批发、化妆品零售;日用化学产品销售;日用百货销售", "wind_ind": "家庭用品", "hs_ind": "(HS)其他医疗保健", "rev_2025": "244953.7", "profit_2025": "36036.7", "net_profit_2025": "36036.7", "pe_2025": "40.85", "net_margin_2025": "0.1471", "dividend_2025": "0.012", "cash_div_2025": "0.3732", "cagr_3y": "0.5247", "net_cagr_3y": "2.9871"}, {"code": "2695.HK", "name": "印象大红袍", "full_name": "印象大红袍股份有限公司", "main_biz": "许可项目：营业性演出；演出经纪；演出场所经营；旅游业务。(依法须经批准的项目，经相关部门批准后方可开展经营活动，具体经营项目以相关部门批准文件或许可证为准)一般项目：其他文化艺术经纪代理；组织文化艺术交流活动；票务代理服务；以自有资金从事投资活动；旅游开发项目策划咨询；游览景区管理；非居住房地产租赁；住房租赁。(除依法须经批准的项目外，凭营业执照依法自主开展经营活动)", "wind_ind": "传媒", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "15091.93", "profit_2025": "2828.61", "net_profit_2025": "3538.58", "pe_2025": "6.89", "net_margin_2025": "0.2345", "dividend_2025": "0.1132", "cash_div_2025": "0.8506", "cagr_3y": "0.3378", "net_cagr_3y": "1.4995"}, {"code": "7618.HK", "name": "京东工业", "full_name": "京东工业股份有限公司", "main_biz": "机械设备销售；电子产品销售；珠宝首饰批发；珠宝首饰零售；钟表销售；针纺织品销售；照相机及器材销售；仪器仪表销售；通讯设备销售；消防器材销售；橡胶制品销售；五金产品零售；五金产品批发；文具用品批发；文具用品零售；体育用品及器材批发；体育用品及器材零售；日用品销售；化肥销售；汽车零配件批发；汽车零配件零售；礼品花卉销售；金属制品销售；金属材料销售；建筑材料销售；建筑装饰材料销售；家用电器销售；家具销售；计算机软硬件及辅助设备批发；计算机软硬件及辅助设备零售；化工产品销售（不含许可类化工产品）；化妆品批发；化妆品零售；服装服饰批发；服装服饰零售；电子元器件批发；电子元器件零售", "wind_ind": "可选消费零售", "hs_ind": "(HS)工用支援", "rev_2025": "2395178.9", "profit_2025": "231372.3", "net_profit_2025": "231372.3", "pe_2025": "37.49", "net_margin_2025": "0.0966", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.1922", "net_cagr_3y": "0.5514"}, {"code": "2408.HK", "name": "遇见小面", "full_name": "广州遇见小面餐饮股份有限公司", "main_biz": "外卖递送服务;餐饮管理;咨询策划服务;信息咨询服务(不含许可类信息咨询服务);文具用品零售;食用农产品零售;水产品零售;工艺美术品及收藏品零售(象牙及其制品除外);鲜肉零售;化妆品零售;厨具卫具及日用杂品零售;珠宝首饰零售;日用家电零售;计算机软硬件及辅助设备零售;食品添加剂销售;互联网销售(除销售需要许可的商品);工艺美术品及礼仪用品制造(象牙及其制品除外);单用途商业预付卡代理销售;非居住房地产租赁;物业管理;日用品销售;日用杂品销售;服装辅料销售;服装服饰零售;鲜蛋零售;新鲜水果零售;新鲜蔬菜零售;电子产品销售;日用玻璃制品销售;家具销售;玩具销售;体育用品及器材零售;个人卫生用品销售;灯具销售;供应链管理服务;企业管理;小餐饮(仅限分支机构经营);餐饮服务(仅限分支机构经营);小餐饮,小食杂,食品小作坊经营(仅限分支机构经营);药品零售;食品互联网销售(销售预包装食品);食品互联网销售;食品经营(销售预包装食品);食品经营;酒类经营", "wind_ind": "消费者服务", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "162235.8", "profit_2025": "10612.4", "net_profit_2025": "10612.4", "pe_2025": "37.43", "net_margin_2025": "0.0654", "dividend_2025": "0.0077", "cash_div_2025": "0.2008", "cagr_3y": "0.5714", "net_cagr_3y": "0.7043"}, {"code": "2539.HK", "name": "乐摩科技", "full_name": "乐摩科技服务股份有限公司", "main_biz": "物联网、电子产品、计算机软硬件的技术开发、技术转让、技术服务；图文设计；游戏产品设计；计算机系统集成、计算机网络工程设计、施工；互联网信息服务、商务信息咨询；公关活动策划；企业形象策划；市场营销策划；自有设备租赁；会务及展览展示服务；健身器材、玩具销售、租赁；电子产品生产；电子产品、金属制品、塑料制品、电脑耗材、办公设备的批发及网上经营；设计、发布、代理国内各类广告；自营和代理各类商品和技术的进出口，但国家限定公司经营或禁止进出口的商品和技术除外。(依法须经批准的项目，经相关部门批准后方可开展经营活动)", "wind_ind": "消费者服务", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "90677.8", "profit_2025": "9373.1", "net_profit_2025": "9373.1", "pe_2025": "23.8", "net_margin_2025": "0.1034", "dividend_2025": "0.0153", "cash_div_2025": "0.2996", "cagr_3y": "0.4004", "net_cagr_3y": "1.4364"}, {"code": "2698.HK", "name": "乐舒适", "full_name": "乐舒适有限公司", "main_biz": "婴儿纸尿裤、婴儿拉拉裤、卫生巾及湿巾等婴儿与女性卫生用品的开发、制造与销售", "wind_ind": "可选消费零售", "hs_ind": "(HS)消费者主要零售商", "rev_2025": "398803.57", "profit_2025": "85163.05", "net_profit_2025": "85163.05", "pe_2025": "27.15", "net_margin_2025": "0.2135", "dividend_2025": "0.0215", "cash_div_2025": "0.4554", "cagr_3y": "0.2142", "net_cagr_3y": "0.8804"}, {"code": "6980.HK", "name": "八马茶业", "full_name": "八马茶业股份有限公司", "main_biz": "一般经营项目是：茶具、茶桌、展示柜的销售；陶瓷产品的批发兼零售；生活日用品的批发兼零售；日用家电批发兼零售；服装服饰的批发、零售；兴办实业(具体项目另行申报)；企业管理咨询(不含证券咨询、人才中介服务和其它限制项目)；文化活动策划；房屋租赁；自有物业租赁；物业管理服务；项目投资(不含限制项目)；投资咨询(不含限制项目)；化妆品的批发、零售；在网上从事商贸活动(法律、行政法规、国务院决定禁止的项目除外，限制的项目须取得许可后方可经营)；货物或技术进出口。(以上法律、行政法规、国务院决定禁止的项目除外，限制的项目须取得许可后方可经营，依法须经批准的项目须取得许可后方可经营)，许可经营项目是：茶叶的批发兼零售；冰激凌制售；预包装食品(不含复热预包装食品)批发兼零售；茶饮料的批发兼零售；即溶茶批发兼零售；固体饮料批发兼零售；茶馆服务；咖啡馆服务；冷饮服务；文艺创作、表演；信息服务业务(仅限互联网信息服务业务)；保健品的批发兼零售。", "wind_ind": "可选消费零售", "hs_ind": "(HS)食物饮品", "rev_2025": "219634.8", "profit_2025": "22233.8", "net_profit_2025": "22225.1", "pe_2025": "11.44", "net_margin_2025": "0.1012", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.0651", "net_cagr_3y": "0.102"}, {"code": "2583.HK", "name": "西普尼", "full_name": "深圳西普尼精密科技股份有限公司", "main_biz": "黄金手表、K金手表、铂金手表、白银手表、贵金属手表、珠宝镶嵌手表、钟表、贵金属智能电子穿戴设备、黄金制品、铂金、K金、珠宝首饰的研发、设计与销售、硬质黄金制品、硬质黄金混合料的研发；软件的技术开发及销售；国内贸易(不含专营、专卖、专控商品)；经营进出口业务；机芯、表壳、表链、钟表配件的研发及销售；礼品、工艺品的购销；手表维修；品牌加盟管理；品牌促销及营销策划；智能戒指、电子产品的研发及销售；健康咨询服务(须经审批的诊疗活动除外)、健康管理咨询(不含医疗行为)、计算机软件、信息系统软件的研发与销售、运行维护；软件信息技术咨询", "wind_ind": "家电Ⅱ", "hs_ind": "(HS)纺织及服饰", "rev_2025": "61084.2", "profit_2025": "10189.6", "net_profit_2025": "10189.8", "pe_2025": "190.95", "net_margin_2025": "0.1668", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.2357", "net_cagr_3y": "0.6073"}, {"code": "6090.HK", "name": "不同集团", "full_name": "不同集团", "main_biz": "通过对用户的前瞻洞察和前沿材料、工艺及技术的创新应用，为家庭多生活场景创造具有独特用户价值的产品。", "wind_ind": "家庭用品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "144582.3", "profit_2025": "6519.8", "net_profit_2025": "6519.8", "pe_2025": "102.87", "net_margin_2025": "0.0451", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.4179", "net_cagr_3y": "0.7181"}, {"code": "2543.HK", "name": "大行科工", "full_name": "大行科工(深圳)股份有限公司", "main_biz": "一般经营项目是：销售五金制品、自行车、童车、电动自行车、电动滑板车及其零配件、交通工具、新型环保节能用品、检测仪器设备、防疫保健辅助用品（不含医疗器械）；依托第三方平台开展自行车与电动自行车及其零配件的销售；佣金代理(拍卖除外)；从事五金制品、自行车、童车、电动自行车、电动滑板车及其零配件、新型环保节能用品及机器设备、交通工具、检测仪器设备、防疫保健辅助用品（不含医疗器械）的批发及进出口业务（法律、行政法规、国务院决定禁止的项目除外，限制的项目须取得许可后方可经营）；设立研发机构，研究和开发新型自行车、电动自行车、电动滑板车、新型环保节能用品、高轻性能材质结构件、管材组合工艺与配套模治具、防疫保健辅助用品及相关技术成果授权转让。", "wind_ind": "耐用消费品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "64147", "profit_2025": "6112.3", "net_profit_2025": "6350.9", "pe_2025": "16.17", "net_margin_2025": "0.099", "dividend_2025": "0.0357", "cash_div_2025": "0.5717", "cagr_3y": "0.3615", "net_cagr_3y": "0.2642"}, {"code": "2648.HK", "name": "安井食品", "full_name": "安井食品集团股份有限公司", "main_biz": "食品生产.(依法须经批准的项目,经相关部门批准后方可开展经营活动,具体经营项目以相关部门批准文件或许可证件为准)一般项目:肉制品及副产品加工(3000吨/年及以下的西式肉制品加工项目除外);鱼糜制品及水产品干腌制加工(冷冻海水鱼糜生产线除外);食品销售(仅销售预包装食品);食品添加剂销售;初级农产品收购;货物进出口;食品进出口;技术进出口;进出口代理;技术服务,技术开发,技术咨询,技术交流,技术转让,技术推广.(除依法须经批准的项目外,凭营业执照依法自主开展经营活动).", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "1619261.3", "profit_2025": "136952.29", "net_profit_2025": "135923.71", "pe_2025": "14.51", "net_margin_2025": "0.0839", "dividend_2025": "0.0486", "cash_div_2025": "0.7017", "cagr_3y": "0.1018", "net_cagr_3y": "0.0728"}, {"code": "6603.HK", "name": "IFBH", "full_name": "IFBH Limited", "main_biz": "公司主要从事即食饮料和食品业务，以“if”和“Innococo”两大泰国品牌为核心，产品涵盖天然椰子水饮料、其他健康饮品及植物基零食，主要在中国大陆、香港运营，并拓展至新加坡、中国台湾及其他国际市场。", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "123987.33", "profit_2025": "16003.17", "net_profit_2025": "16003.17", "pe_2025": "16.38", "net_margin_2025": "0.1291", "dividend_2025": "0.013", "cash_div_2025": "0.3045", "cagr_3y": "/", "net_cagr_3y": "/"}, {"code": "2508.HK", "name": "圣贝拉集团", "full_name": "圣贝拉集团有限公司", "main_biz": "公司是中国领先的产后护理和修复集团，公司还提供家庭护理服务和满足女性需求的食品。", "wind_ind": "家庭用品", "hs_ind": "(HS)支援服务", "rev_2025": "104585.9", "profit_2025": "41118", "net_profit_2025": "40787.1", "pe_2025": "8.66", "net_margin_2025": "0.39", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.3041", "net_cagr_3y": "0.4424"}, {"code": "6168.HK", "name": "周六福", "full_name": "周六福珠宝股份有限公司", "main_biz": "贵金属首饰、镶嵌首饰、珠宝玉石首饰设计、批发、零售、进出口;珠宝玉器、铂金镶嵌饰品、钻石镶嵌饰品、翡翠饰品购销;品牌策划、珠宝技术开发与技术服务;企业管理咨询（不含人才中介服务、证券、期货、保险、金融业务及其他限制项目）;投资兴办实业（具体项目另行申报）;国内贸易，从事货物及技术的进出口业务（法律、行政法规、国务院决定规定在登记前须经批准的项目除外）;钟表与计时仪器制造、销售", "wind_ind": "可选消费零售", "hs_ind": "(HS)专业零售", "rev_2025": "583429.5", "profit_2025": "76927.9", "net_profit_2025": "77029.6", "pe_2025": "15.47", "net_margin_2025": "0.132", "dividend_2025": "0.035", "cash_div_2025": "0.5155", "cagr_3y": "0.2344", "net_cagr_3y": "0.1022"}, {"code": "6883.HK", "name": "颖通控股", "full_name": "颖通控股有限公司", "main_biz": "香水，还包括彩妆、护肤品、个人护理产品、眼镜及家居香氛。", "wind_ind": "家庭用品", "hs_ind": "(HS)其他医疗保健", "rev_2025": "208336.3", "profit_2025": "22702.9", "net_profit_2025": "22702.9", "pe_2025": "10.64", "net_margin_2025": "0.109", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.0755", "net_cagr_3y": "0.0993"}, {"code": "3288.HK", "name": "海天味业", "full_name": "佛山市海天调味食品股份有限公司", "main_biz": "生产经营调味品,豆制品,食品,饮料,包装材料;农副产品的加工;其他电信服务;货物,技术进出口(国家禁止或涉及行政审批的货物和技术进出口除外);信息咨询服务;食品互联网销售;批发兼零售预包装食品.", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "2887338", "profit_2025": "704545.2", "net_profit_2025": "703846.5", "pe_2025": "25.26", "net_margin_2025": "0.2438", "dividend_2025": "0.037", "cash_div_2025": "0.8811", "cagr_3y": "0.0408", "net_cagr_3y": "0.0433"}, {"code": "2603.HK", "name": "吉宏股份", "full_name": "厦门吉宏科技股份有限公司", "main_biz": "一般项目:专业设计服务;软件开发;信息技术咨询服务;第一类医疗器械销售;第二类医疗器械销售;广告制作;广告发布;广告设计,代理;包装材料及制品销售;塑料制品制造;塑料制品销售;印刷专用设备制造;专用设备制造(不含许可类专业设备制造);专用设备修理;劳动保护用品生产;互联网销售(除销售需要许可的商品);服装辅料销售;针纺织品及原料销售;鞋帽零售;箱包销售;皮革制品销售;工艺美术品及收藏品零售(象牙及其制品除外);珠宝首饰零售;化妆品零售;宠物食品及用品零售;金属制品销售;家具销售;家用电器销售;日用品销售;农副产品销售;通讯设备销售;电子产品销售;环境保护专用设备销售;化工产品销售(不含许可类化工产品);五金产品零售;办公设备耗材销售;汽车装饰用品销售;母婴用品销售;眼镜销售(不含隐形眼镜);个人商务服务;企业管理咨询;企业形象策划;会议及展览服务;市场营销策划;信息系统集成服务;礼品花卉销售;技术进出口;货物进出口;食品互联网销售(仅销售预包装食品).(除依法须经批准的项目外,凭营业执照依法自主开展经营活动)许可项目:包装装潢印刷品印刷;出版物互联网销售;酒类经营;食品互联网销售.(依法须经批准的项目,经相关部门批准后方可开展经营活动,具体经营项目以相关部门批准文件或许可证件为准).", "wind_ind": "可选消费零售", "hs_ind": "(HS)专业零售", "rev_2025": "672161.2", "profit_2025": "33405", "net_profit_2025": "27683.2", "pe_2025": "20.49", "net_margin_2025": "0.0412", "dividend_2025": "0.0309", "cash_div_2025": "0.5867", "cagr_3y": "0.0773", "net_cagr_3y": "0.1459"}, {"code": "6831.HK", "name": "绿茶集团", "full_name": "绿茶集团有限公司", "main_biz": "公司以适宜的价格提供创新及优质美食以及受中国传统艺术启发的精致装修,为客户提供出众的用餐体验并创造客户价值.", "wind_ind": "消费者服务", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "476296.7", "profit_2025": "48639.9", "net_profit_2025": "48648.1", "pe_2025": "9.93", "net_margin_2025": "0.1021", "dividend_2025": "0.1284", "cash_div_2025": "1.0408", "cagr_3y": "0.261", "net_cagr_3y": "2.0844"}, {"code": "2589.HK", "name": "沪上阿姨", "full_name": "沪上阿姨(上海)实业股份有限公司", "main_biz": "现制饮品公司", "wind_ind": "消费者服务", "hs_ind": "(HS)食物饮品", "rev_2025": "446564.4", "profit_2025": "50131.7", "net_profit_2025": "50131.7", "pe_2025": "22.56", "net_margin_2025": "0.1123", "dividend_2025": "0.0221", "cash_div_2025": "0.3515", "cagr_3y": "0.2663", "net_cagr_3y": "0.4969"}, {"code": "2625.HK", "name": "江苏宏信", "full_name": "江苏宏信超市连锁股份有限公司", "main_biz": "公司的超市提供全面的日常消费品(大致可分为生鲜,粮油,副食及家居用品),以满足客户的日常需求,而公司的便利店每天营业16或24小时,以满足快速购买日常消费品的需求.在连锁店管理方面,公司采用「四个统一」,包括标准化的品牌形象及店铺设计,集中采购,集中存货控制及配送以及零售店铺的统一管理.该等统一措施使我们能够从规模经济中获益,精简运营,并为顾客提供可预测的购物体验.鉴于电子商务在中国日益普及,于往绩记录期间,公司为公司的零售店铺设立两个小程序「龙会易购」及「宏信龙当日达」.公司于商城销售时装及服装,童装,化妆品及个人护理产品,珠宝,配饰,鞋类,家电,消费电子产品,酒及杂货.公司致力于提供全面的商品,以满足人们对时尚产品的需求.此外,公司营运小程序「江都商城」,在线销售在公司商城提供的产品.公司亦与三个第三方电子商务平台(即抖音,京东及微信)合作,在线向客户销售商品.就公司的零售业务而言,公司(i)通过于零售店铺及商城向消费者一般销售以及(ii)向客户(包括企业及政府实体)进行大宗销售获得.公司亦于零售店铺及商城收取授权销售款项,并向品牌专柜收取销售总额或协定的销售目标(以较高者为准)的一定比例作为佣金.除公司的零售业务外,公司亦将零售店铺及商城的部分店面面积或店面租赁予餐厅,酒店及药房等其他零售运营商并收取租金收入.", "wind_ind": "日常消费零售", "hs_ind": "(HS)消费者主要零售商", "rev_2025": "154396.2", "profit_2025": "3823.8", "net_profit_2025": "3662.8", "pe_2025": "26.1", "net_margin_2025": "0.0237", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.0513", "net_cagr_3y": "-0.0987"}, {"code": "2569.HK", "name": "舒宝国际", "full_name": "舒宝国际集团有限公司", "main_biz": "公司主要在中国从事个人一次性使用卫生用品开发,生产及销售,专注于欧亚大陆新兴市场的婴童护理类用品.", "wind_ind": "家庭用品", "hs_ind": "(HS)消费者主要零售商", "rev_2025": "90547.4", "profit_2025": "5585.1", "net_profit_2025": "5585.1", "pe_2025": "14.77", "net_margin_2025": "0.0617", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.3043", "net_cagr_3y": "0.1009"}, {"code": "2097.HK", "name": "蜜雪集团", "full_name": "蜜雪冰城股份有限公司", "main_biz": "领先的现制饮品企业，生产现制果饮、茶饮、冰淇淋和咖啡等产品。", "wind_ind": "消费者服务", "hs_ind": "(HS)食物饮品", "rev_2025": "3355992.3", "profit_2025": "592707.7", "net_profit_2025": "588670.4", "pe_2025": "27.05", "net_margin_2025": "0.1754", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.3521", "net_cagr_3y": "0.4339"}, {"code": "1364.HK", "name": "古茗", "full_name": "古茗控股有限公司", "main_biz": "中国现制饮品企业,致力于向消费者提供新鲜美味,出品一致,价格亲民的高质量产品.", "wind_ind": "消费者服务", "hs_ind": "(HS)食物饮品", "rev_2025": "1291377.4", "profit_2025": "311548.9", "net_profit_2025": "310911.8", "pe_2025": "22.67", "net_margin_2025": "0.2408", "dividend_2025": "0.0577", "cash_div_2025": "0.9785", "cagr_3y": "0.3244", "net_cagr_3y": "1.0393"}, {"code": "0325.HK", "name": "布鲁可", "full_name": "布鲁可集团有限公司", "main_biz": "公司是中国拼搭角色类玩具的领导者.", "wind_ind": "耐用消费品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "291333.8", "profit_2025": "63373.7", "net_profit_2025": "63373.7", "pe_2025": "99.24", "net_margin_2025": "0.2175", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "1.0761", "net_cagr_3y": "0.5196"}, {"code": "0999.HK", "name": "小菜园", "full_name": "小菜园国际控股有限公司", "main_biz": "中式餐饮", "wind_ind": "消费者服务", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "534509.1", "profit_2025": "71509.2", "net_profit_2025": "71509.2", "pe_2025": "15.08", "net_margin_2025": "0.1338", "dividend_2025": "0.0506", "cash_div_2025": "0.6997", "cagr_3y": "0.1848", "net_cagr_3y": "0.4438"}, {"code": "2593.HK", "name": "草姬集团", "full_name": "草姬集团控股有限公司", "main_biz": "本公司是立足香港,稳健可信的多元化保健品及美容与护肤品供应商.", "wind_ind": "家庭用品", "hs_ind": "(HS)其他医疗保健", "rev_2025": "20581.49", "profit_2025": "-2078.22", "net_profit_2025": "-2078.22", "pe_2025": "-76.64", "net_margin_2025": "-0.101", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.0346", "net_cagr_3y": "穿零"}, {"code": "1318.HK", "name": "毛戈平", "full_name": "毛戈平化妆品股份有限公司", "main_biz": "批发,零售:化妆品,化妆用品,美容器械,日用百货,日用化学品,文化用品,塑料制品,箱包,皮革制品与照明器材;服务:化妆品的技术开发,技术咨询,技术服务,化妆形象设计,成年人非证书劳动职业技能培训(涉及前置审批的项目除外),经济信息咨询(除证券,期货),企业形象策划;其他无需报经审批的一切合法项目(依法须经批准的项目,经相关部门批准后方可开展经营活动).", "wind_ind": "家庭用品", "hs_ind": "(HS)其他医疗保健", "rev_2025": "505045.5", "profit_2025": "120544", "net_profit_2025": "120409.4", "pe_2025": "34.51", "net_margin_2025": "0.2384", "dividend_2025": "0.014", "cash_div_2025": "0.4065", "cagr_3y": "0.4029", "net_cagr_3y": "0.5066"}, {"code": "2585.HK", "name": "梦金园", "full_name": "梦金园黄金珠宝集团股份有限公司", "main_biz": "一般项目:珠宝首饰批发;珠宝首饰零售;金银制品销售;工艺美术品及礼仪用品制造(象牙及其制品除外);珠宝首饰制造;住房租赁;停车场服务.许可项目:货物进出口.", "wind_ind": "纺织服装Ⅱ", "hs_ind": "(HS)专业零售", "rev_2025": "2070956.7", "profit_2025": "10994.6", "net_profit_2025": "9652.1", "pe_2025": "53.65", "net_margin_2025": "0.0047", "dividend_2025": "0.0222", "cash_div_2025": "0.8484", "cagr_3y": "0.0961", "net_cagr_3y": "-0.1888"}, {"code": "2519.HK", "name": "傲基股份", "full_name": "傲基(深圳)跨境商务股份有限公司", "main_biz": "公司是专注于提供优质家具家居类产品的线上零售商。凭藉稳健的供应链管理及有效的物流解决方案，为消费者提供广泛「家与生活」场景下的愉快生活体验。", "wind_ind": "可选消费零售", "hs_ind": "(HS)专业零售", "rev_2025": "1369873.8", "profit_2025": "15258.6", "net_profit_2025": "16113.9", "pe_2025": "6.51", "net_margin_2025": "0.0118", "dividend_2025": "0.0447", "cash_div_2025": "0.6441", "cagr_3y": "0.2449", "net_cagr_3y": "-0.0973"}, {"code": "2562.HK", "name": "狮腾控股", "full_name": "狮腾控股有限公司", "main_biz": "公司主要从事投资控股业务，并通过子公司Synagie在东南亚运营一个数据驱动的平台，为高端美容保健、时尚服装、生活方式及健康领域的品牌提供全套数字解决方案。公司业务覆盖东南亚六大主要经济体——新加坡、马来西亚、菲律宾、越南、泰国及印尼，并拓展至香港及西班牙。", "wind_ind": "可选消费零售", "hs_ind": "(HS)专业零售", "rev_2025": "45783.46", "profit_2025": "-28106.33", "net_profit_2025": "-28106.33", "pe_2025": "-0.45", "net_margin_2025": "-0.6139", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "/", "net_cagr_3y": "均亏损"}, {"code": "2460.HK", "name": "华润饮料", "full_name": "华润饮料(控股)有限公司", "main_biz": "以饮用纯净水产品的成功为根基,通过丰富水种,拓展产品规格,不断丰富包装饮用水产品矩阵,覆盖包括外出,居家,商务,餐饮,运动等多种消费场景.", "wind_ind": "食品饮料", "hs_ind": "(HS)食物饮品", "rev_2025": "1100211.1", "profit_2025": "100847.3", "net_profit_2025": "98534.1", "pe_2025": "16.75", "net_margin_2025": "0.0896", "dividend_2025": "0.0417", "cash_div_2025": "0.8982", "cagr_3y": "-0.0448", "net_cagr_3y": "-0.0015"}, {"code": "2549.HK", "name": "卡罗特", "full_name": "卡罗特(商业)有限公司", "main_biz": "线上厨具细分领域.", "wind_ind": "家庭用品", "hs_ind": "(HS)家庭电器及用品", "rev_2025": "215667.1", "profit_2025": "25781.9", "net_profit_2025": "25780.6", "pe_2025": "7.87", "net_margin_2025": "0.1195", "dividend_2025": "0.031", "cash_div_2025": "0.2651", "cagr_3y": "0.4105", "net_cagr_3y": "0.3333"}, {"code": "6181.HK", "name": "老铺黄金", "full_name": "老铺黄金股份有限公司", "main_biz": "组织文化艺术交流;承办展览展示;工艺美术设计;产品设计;销售金银制品,珠宝首饰,工艺品;非物质文化遗产保护.(企业依法自主选择经营项目,开展经营活动;依法须经批准的项目,经相关部门批准后依批准的内容开展经营活动;不得从事本市产业政策禁止和限制类项目的经营活动.)", "wind_ind": "纺织服装Ⅱ", "hs_ind": "(HS)纺织及服饰", "rev_2025": "2730318.4", "profit_2025": "486793.6", "net_profit_2025": "486793.6", "pe_2025": "31.53", "net_margin_2025": "0.1783", "dividend_2025": "0.0391", "cash_div_2025": "0.7802", "cagr_3y": "1.7631", "net_cagr_3y": "2.7204"}, {"code": "2555.HK", "name": "茶百道", "full_name": "四川百茶百道实业股份有限公司", "main_biz": "茶饮", "wind_ind": "消费者服务", "hs_ind": "(HS)食物饮品", "rev_2025": "539506.8", "profit_2025": "82135.5", "net_profit_2025": "80489.7", "pe_2025": "15.8", "net_margin_2025": "0.1492", "dividend_2025": "0.1203", "cash_div_2025": "1.3198", "cagr_3y": "0.0843", "net_cagr_3y": "-0.0552"}, {"code": "2497.HK", "name": "富景中国控股", "full_name": "富景中国控股有限公司", "main_biz": "公司是山东省最大的盆栽蔬菜农产品生产商.", "wind_ind": "食品饮料", "hs_ind": "(HS)农业产品", "rev_2025": "19102.6", "profit_2025": "6338.5", "net_profit_2025": "6338.5", "pe_2025": "3.13", "net_margin_2025": "0.3318", "dividend_2025": "/", "cash_div_2025": "/", "cagr_3y": "0.1467", "net_cagr_3y": "0.2583"}, {"code": "2536.HK", "name": "百乐皇宫", "full_name": "百乐皇宫控股有限公司", "main_biz": "本公司是集娱乐、博彩及休闲于一身的集团。", "wind_ind": "消费者服务", "hs_ind": "(HS)旅游及消闲设施", "rev_2025": "24028.83", "profit_2025": "1420.33", "net_profit_2025": "1420.33", "pe_2025": "154.14", "net_margin_2025": "0.0591", "dividend_2025": "0.0134", "cash_div_2025": "1.5198", "cagr_3y": "0.1732", "net_cagr_3y": "-0.2412"}];
+const tags = [{"label": "食品饮料", "category": "产品领域", "desc": "主营业务涉及食品或饮料", "count": 19, "total": 43, "pct": 44.2, "companies": [{"name": "鲟龙科技", "code": "6715.HK", "matched_keywords": ["鱼子酱"]}, {"name": "溜溜梅", "code": "6658.HK", "matched_keywords": ["食品"]}, {"name": "龙丰集团", "code": "2290.HK", "matched_keywords": ["食品"]}, {"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["食品", "饮料", "茶", "预包装食品", "酒", "纯净水"]}, {"name": "鸣鸣很忙", "code": "1768.HK", "matched_keywords": ["食品", "饮料"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["食品", "预包装食品", "水产", "农产品", "蔬菜", "酒"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["食品", "饮料", "茶饮", "咖啡", "茶", "预包装食品", "茶饮料"]}, {"name": "安井食品", "code": "2648.HK", "matched_keywords": ["食品", "水产", "鱼糜"]}, {"name": "IFBH", "code": "6603.HK", "matched_keywords": ["食品", "饮料", "饮品", "零食", "椰子水"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["食品"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["食品", "饮料", "调味品", "预包装食品"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["食品", "酒"]}, {"name": "沪上阿姨", "code": "2589.HK", "matched_keywords": ["饮品"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["酒"]}, {"name": "蜜雪集团", "code": "2097.HK", "matched_keywords": ["饮品", "茶饮", "果饮", "咖啡", "冰淇淋", "茶"]}, {"name": "古茗", "code": "1364.HK", "matched_keywords": ["饮品"]}, {"name": "华润饮料", "code": "2460.HK", "matched_keywords": ["水产", "纯净水"]}, {"name": "茶百道", "code": "2555.HK", "matched_keywords": ["茶饮", "茶"]}, {"name": "富景中国控股", "code": "2497.HK", "matched_keywords": ["农产品", "蔬菜"]}]}, {"label": "保健品/健康", "category": "产品领域", "desc": "涉及保健品或健康相关", "count": 16, "total": 43, "pct": 37.2, "companies": [{"name": "龙丰集团", "code": "2290.HK", "matched_keywords": ["保健", "药品", "护理"]}, {"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["营养素", "中药"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["医疗"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["药品"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["健身"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["保健"]}, {"name": "西普尼", "code": "2583.HK", "matched_keywords": ["健康"]}, {"name": "大行科工", "code": "2543.HK", "matched_keywords": ["保健"]}, {"name": "IFBH", "code": "6603.HK", "matched_keywords": ["健康"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["护理"]}, {"name": "颖通控股", "code": "6883.HK", "matched_keywords": ["护理"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["医疗"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["护理"]}, {"name": "舒宝国际", "code": "2569.HK", "matched_keywords": ["护理"]}, {"name": "草姬集团", "code": "2593.HK", "matched_keywords": ["保健"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["保健", "健康"]}]}, {"label": "生产/制造", "category": "价值链", "desc": "涉及生产制造环节", "count": 15, "total": 43, "pct": 34.9, "companies": [{"name": "溜溜梅", "code": "6658.HK", "matched_keywords": ["生产"]}, {"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["制造"]}, {"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["生产", "加工"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["制造"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["制造"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["生产"]}, {"name": "乐舒适", "code": "2698.HK", "matched_keywords": ["制造", "制造与销售"]}, {"name": "安井食品", "code": "2648.HK", "matched_keywords": ["生产", "加工"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["制造"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["生产", "加工"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["生产", "制造"]}, {"name": "舒宝国际", "code": "2569.HK", "matched_keywords": ["生产"]}, {"name": "蜜雪集团", "code": "2097.HK", "matched_keywords": ["生产"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["制造"]}, {"name": "富景中国控股", "code": "2497.HK", "matched_keywords": ["生产"]}]}, {"label": "家居/日用品", "category": "产品领域", "desc": "涉及家居生活或日用品", "count": 13, "total": 43, "pct": 30.2, "companies": [{"name": "龙丰集团", "code": "2290.HK", "matched_keywords": ["家居", "日用品", "日用"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["日用"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["家具", "日用品", "日用", "家具销售"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["家具", "日用品", "日用", "厨具", "厨具卫具", "家电", "灯具", "家具销售"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["日用品", "日用", "家电"]}, {"name": "不同集团", "code": "6090.HK", "matched_keywords": ["家庭", "生活场景"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["家庭"]}, {"name": "颖通控股", "code": "6883.HK", "matched_keywords": ["家居", "家居香氛"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["家具", "日用品", "日用", "家具销售"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["家居", "家居用品", "家电"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["日用"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["家居", "家具"]}, {"name": "卡罗特", "code": "2549.HK", "matched_keywords": ["厨具"]}]}, {"label": "零售", "category": "价值链", "desc": "涉及终端零售环节", "count": 13, "total": 43, "pct": 30.2, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["零售"]}, {"name": "鸣鸣很忙", "code": "1768.HK", "matched_keywords": ["零售", "零售商"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["零售"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["零售"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["零售"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["零售"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["零售"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["零售"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["零售"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["零售", "零售业务", "零售店铺", "零售运营商"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["零售"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["零售"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["零售", "零售商"]}]}, {"label": "线上/互联网销售", "category": "市场特征", "desc": "通过互联网或数字化渠道销售", "count": 11, "total": 43, "pct": 25.6, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["互联网销售", "互联网"]}, {"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["电子商务", "数字", "互联网", "平台"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["互联网销售", "互联网"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["网上", "互联网"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["互联网"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["互联网销售", "互联网"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["互联网销售", "互联网"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["电子商务", "小程序", "在线", "平台"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["线上"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["数字", "数据驱动", "平台"]}, {"name": "卡罗特", "code": "2549.HK", "matched_keywords": ["线上"]}]}, {"label": "批发/分销", "category": "价值链", "desc": "涉及批发分销环节", "count": 11, "total": 43, "pct": 25.6, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["批发"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["批发"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["批发"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["代理"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["批发", "代理"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["批发"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["批发"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["批发"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["代理"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["批发"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["批发"]}]}, {"label": "国际化/出海", "category": "市场特征", "desc": "业务涉及海外市场或跨境经营", "count": 10, "total": 43, "pct": 23.3, "companies": [{"name": "鲟龙科技", "code": "6715.HK", "matched_keywords": ["全球"]}, {"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "IFBH", "code": "6603.HK", "matched_keywords": ["国际", "新加坡", "泰国"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "海天味业", "code": "3288.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["出口", "进出口"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["东南亚", "新加坡", "马来西亚", "越南", "泰国", "印尼", "西班牙"]}]}, {"label": "化妆品/护肤", "category": "产品领域", "desc": "涉及化妆品或护肤美容产品", "count": 10, "total": 43, "pct": 23.3, "companies": [{"name": "龙丰集团", "code": "2290.HK", "matched_keywords": ["化妆品", "护肤", "香水", "个人护理"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["化妆品", "日用化学"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["化妆品"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["化妆品"]}, {"name": "颖通控股", "code": "6883.HK", "matched_keywords": ["护肤", "香水", "彩妆", "个人护理"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["化妆品"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["化妆品", "个人护理"]}, {"name": "草姬集团", "code": "2593.HK", "matched_keywords": ["护肤", "美容"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["化妆品", "美容", "日用化学"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["美容"]}]}, {"label": "玩具/文创", "category": "产品领域", "desc": "涉及玩具或文创产品", "count": 10, "total": 43, "pct": 23.3, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["工艺美术", "收藏品"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["玩具", "工艺美术", "收藏品"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["玩具"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["文化"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["工艺美术", "收藏品"]}, {"name": "绿茶集团", "code": "6831.HK", "matched_keywords": ["艺术"]}, {"name": "布鲁可", "code": "0325.HK", "matched_keywords": ["玩具", "拼搭"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["文化"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["工艺美术"]}, {"name": "老铺黄金", "code": "6181.HK", "matched_keywords": ["工艺美术", "工艺品", "文化", "艺术"]}]}, {"label": "高端/精品定位", "category": "战略特征", "desc": "定位于高端或精品市场", "count": 10, "total": 43, "pct": 23.3, "companies": [{"name": "鲟龙科技", "code": "6715.HK", "matched_keywords": ["第一", "最大"]}, {"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["精致"]}, {"name": "不同集团", "code": "6090.HK", "matched_keywords": ["独特"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["领先"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["第一"]}, {"name": "绿茶集团", "code": "6831.HK", "matched_keywords": ["精致", "优质", "出众"]}, {"name": "蜜雪集团", "code": "2097.HK", "matched_keywords": ["领先"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["优质"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["高端", "高端美容"]}, {"name": "富景中国控股", "code": "2497.HK", "matched_keywords": ["最大"]}]}, {"label": "珠宝/黄金", "category": "产品领域", "desc": "涉及珠宝首饰或贵金属产品", "count": 9, "total": 43, "pct": 20.9, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["珠宝", "首饰"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["珠宝", "首饰"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["珠宝", "首饰"]}, {"name": "西普尼", "code": "2583.HK", "matched_keywords": ["珠宝", "黄金", "首饰", "贵金属", "镶嵌", "铂金", "K金", "银"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["珠宝", "首饰", "贵金属", "钻石", "翡翠", "镶嵌", "铂金"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["珠宝", "首饰"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["珠宝"]}, {"name": "梦金园", "code": "2585.HK", "matched_keywords": ["珠宝", "首饰", "银"]}, {"name": "老铺黄金", "code": "6181.HK", "matched_keywords": ["珠宝", "首饰", "银"]}]}, {"label": "研发/技术创新", "category": "商业模式", "desc": "注重研发和技术创新", "count": 8, "total": 43, "pct": 18.6, "companies": [{"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["研发", "技术开发"]}, {"name": "林清轩", "code": "2657.HK", "matched_keywords": ["技术开发"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["技术开发"]}, {"name": "西普尼", "code": "2583.HK", "matched_keywords": ["研发", "技术开发"]}, {"name": "不同集团", "code": "6090.HK", "matched_keywords": ["前沿"]}, {"name": "大行科工", "code": "2543.HK", "matched_keywords": ["研发", "技术成果", "新型", "研究"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["技术开发", "技术开发与技术服务"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["技术开发"]}]}, {"label": "规模经济/大规模", "category": "战略特征", "desc": "追求规模经济效应", "count": 8, "total": 43, "pct": 18.6, "companies": [{"name": "鲟龙科技", "code": "6715.HK", "matched_keywords": ["最大", "第一"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["领先"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["第一"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["规模"]}, {"name": "蜜雪集团", "code": "2097.HK", "matched_keywords": ["领先"]}, {"name": "布鲁可", "code": "0325.HK", "matched_keywords": ["领导者"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["广泛"]}, {"name": "富景中国控股", "code": "2497.HK", "matched_keywords": ["最大"]}]}, {"label": "消费场景多元", "category": "战略特征", "desc": "覆盖多种消费场景", "count": 8, "total": 43, "pct": 18.6, "companies": [{"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["商务"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["餐饮"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["商务"]}, {"name": "不同集团", "code": "6090.HK", "matched_keywords": ["场景", "生活场景", "多生活场景"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["商务"]}, {"name": "小菜园", "code": "0999.HK", "matched_keywords": ["餐饮"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["场景"]}, {"name": "华润饮料", "code": "2460.HK", "matched_keywords": ["场景", "消费场景", "外出", "居家", "商务", "餐饮", "运动"]}]}, {"label": "服装/纺织", "category": "产品领域", "desc": "涉及服装或纺织品类", "count": 7, "total": 43, "pct": 16.3, "companies": [{"name": "京东工业", "code": "7618.HK", "matched_keywords": ["服装", "纺织", "服饰"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["服装", "服饰"]}, {"name": "八马茶业", "code": "6980.HK", "matched_keywords": ["服装", "服饰"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["服装", "纺织", "鞋帽", "箱包", "皮革"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["服装", "童装", "时装"]}, {"name": "毛戈平", "code": "1318.HK", "matched_keywords": ["箱包", "皮革"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["服装"]}]}, {"label": "餐饮/服务", "category": "产品领域", "desc": "提供餐饮或餐饮相关服务", "count": 6, "total": 43, "pct": 14.0, "companies": [{"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["餐饮", "餐饮服务", "餐饮管理", "菜", "外卖", "递送"]}, {"name": "绿茶集团", "code": "6831.HK", "matched_keywords": ["用餐", "美食"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["面"]}, {"name": "小菜园", "code": "0999.HK", "matched_keywords": ["餐饮", "中式餐饮"]}, {"name": "华润饮料", "code": "2460.HK", "matched_keywords": ["餐饮"]}, {"name": "富景中国控股", "code": "2497.HK", "matched_keywords": ["菜"]}]}, {"label": "户外/运动", "category": "产品领域", "desc": "涉及户外运动或休闲装备", "count": 6, "total": 43, "pct": 14.0, "companies": [{"name": "铜师傅", "code": "0664.HK", "matched_keywords": ["体育用品"]}, {"name": "乐欣户外", "code": "2720.HK", "matched_keywords": ["钓鱼", "帐篷"]}, {"name": "京东工业", "code": "7618.HK", "matched_keywords": ["体育用品"]}, {"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["体育用品"]}, {"name": "大行科工", "code": "2543.HK", "matched_keywords": ["自行车", "电动自行车", "滑板车"]}, {"name": "华润饮料", "code": "2460.HK", "matched_keywords": ["运动"]}]}, {"label": "母婴/婴童", "category": "产品领域", "desc": "涉及母婴或婴童相关产品/服务", "count": 5, "total": 43, "pct": 11.6, "companies": [{"name": "龙丰集团", "code": "2290.HK", "matched_keywords": ["母婴"]}, {"name": "乐舒适", "code": "2698.HK", "matched_keywords": ["婴儿", "纸尿裤"]}, {"name": "圣贝拉集团", "code": "2508.HK", "matched_keywords": ["产后护理"]}, {"name": "吉宏股份", "code": "2603.HK", "matched_keywords": ["母婴"]}, {"name": "舒宝国际", "code": "2569.HK", "matched_keywords": ["婴童"]}]}, {"label": "全渠道", "category": "战略特征", "desc": "线上线下多渠道覆盖", "count": 5, "total": 43, "pct": 11.6, "companies": [{"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["平台", "电子商务"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["零售店铺", "小程序", "第三方", "平台", "电子商务"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["线上"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["平台"]}, {"name": "卡罗特", "code": "2549.HK", "matched_keywords": ["线上"]}]}, {"label": "跨境电商", "category": "市场特征", "desc": "以跨境电商或线上平台为核心渠道", "count": 4, "total": 43, "pct": 9.3, "companies": [{"name": "东鹏饮料", "code": "9980.HK", "matched_keywords": ["电子商务"]}, {"name": "乐摩科技", "code": "2539.HK", "matched_keywords": ["网上经营"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["电子商务"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["线上零售"]}]}, {"label": "品牌运营", "category": "商业模式", "desc": "以品牌运营和品牌建设为核心", "count": 4, "total": 43, "pct": 9.3, "companies": [{"name": "IFBH", "code": "6603.HK", "matched_keywords": ["品牌"]}, {"name": "周六福", "code": "6168.HK", "matched_keywords": ["品牌", "品牌策划"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["品牌", "品牌形象", "品牌专柜"]}, {"name": "狮腾控股", "code": "2562.HK", "matched_keywords": ["品牌"]}]}, {"label": "连锁/加盟", "category": "商业模式", "desc": "采用连锁加盟或门店扩张模式", "count": 3, "total": 43, "pct": 7.0, "companies": [{"name": "鸣鸣很忙", "code": "1768.HK", "matched_keywords": ["零售商"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["连锁", "店铺", "分店", "零售店铺"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["零售商"]}]}, {"label": "供应链管理", "category": "商业模式", "desc": "强调供应链和物流管理能力", "count": 3, "total": 43, "pct": 7.0, "companies": [{"name": "遇见小面", "code": "2408.HK", "matched_keywords": ["供应链", "供应链管理"]}, {"name": "江苏宏信", "code": "2625.HK", "matched_keywords": ["集中采购", "配送", "存货控制"]}, {"name": "傲基股份", "code": "2519.HK", "matched_keywords": ["供应链", "供应链管理", "物流"]}]}];
+const wordFreq = [{"word": "用品", "count": 15, "pct": 34.9}, {"word": "制造", "count": 13, "pct": 30.2}, {"word": "食品", "count": 12, "pct": 27.9}, {"word": "提供", "count": 11, "pct": 25.6}, {"word": "化妆品", "count": 10, "pct": 23.3}, {"word": "产品", "count": 10, "pct": 23.3}, {"word": "珠宝首饰", "count": 10, "pct": 23.3}, {"word": "器材", "count": 8, "pct": 18.6}, {"word": "互联网销售", "count": 8, "pct": 18.6}, {"word": "租赁", "count": 8, "pct": 18.6}, {"word": "生产", "count": 8, "pct": 18.6}, {"word": "一般", "count": 7, "pct": 16.3}, {"word": "工艺美术品", "count": 7, "pct": 16.3}, {"word": "信息", "count": 7, "pct": 16.3}, {"word": "饮料", "count": 7, "pct": 16.3}, {"word": "电子产品", "count": 7, "pct": 16.3}, {"word": "中国", "count": 7, "pct": 16.3}, {"word": "体育用品", "count": 6, "pct": 14.0}, {"word": "技术开发", "count": 6, "pct": 14.0}, {"word": "业务", "count": 6, "pct": 14.0}, {"word": "辅助", "count": 6, "pct": 14.0}, {"word": "手表", "count": 6, "pct": 14.0}, {"word": "商城", "count": 6, "pct": 14.0}, {"word": "日用品", "count": 5, "pct": 11.6}, {"word": "文具用品", "count": 5, "pct": 11.6}, {"word": "软件", "count": 5, "pct": 11.6}, {"word": "研发", "count": 5, "pct": 11.6}, {"word": "预包装食品", "count": 5, "pct": 11.6}, {"word": "设备", "count": 5, "pct": 11.6}, {"word": "餐饮", "count": 5, "pct": 11.6}, {"word": "日用", "count": 5, "pct": 11.6}, {"word": "制品", "count": 5, "pct": 11.6}, {"word": "生活", "count": 5, "pct": 11.6}, {"word": "珠宝", "count": 5, "pct": 11.6}, {"word": "主要", "count": 5, "pct": 11.6}, {"word": "客户", "count": 5, "pct": 11.6}, {"word": "零售店铺", "count": 5, "pct": 11.6}, {"word": "收藏品", "count": 4, "pct": 9.3}, {"word": "信息技术", "count": 4, "pct": 9.3}, {"word": "加工", "count": 4, "pct": 9.3}, {"word": "零配件", "count": 4, "pct": 9.3}, {"word": "家具", "count": 4, "pct": 9.3}, {"word": "计算机", "count": 4, "pct": 9.3}, {"word": "软硬件", "count": 4, "pct": 9.3}, {"word": "服装服饰", "count": 4, "pct": 9.3}, {"word": "个人", "count": 4, "pct": 9.3}, {"word": "塑料制品", "count": 4, "pct": 9.3}, {"word": "商品", "count": 4, "pct": 9.3}, {"word": "镶嵌", "count": 4, "pct": 9.3}, {"word": "通过", "count": 4, "pct": 9.3}, {"word": "新型", "count": 4, "pct": 9.3}, {"word": "保健", "count": 4, "pct": 9.3}, {"word": "从事", "count": 4, "pct": 9.3}, {"word": "品牌", "count": 4, "pct": 9.3}, {"word": "满足", "count": 4, "pct": 9.3}, {"word": "需求", "count": 4, "pct": 9.3}, {"word": "包括", "count": 4, "pct": 9.3}, {"word": "专用设备", "count": 4, "pct": 9.3}, {"word": "保健品", "count": 3, "pct": 7.0}, {"word": "护肤品", "count": 3, "pct": 7.0}, {"word": "家居", "count": 3, "pct": 7.0}, {"word": "礼仪", "count": 3, "pct": 7.0}, {"word": "货物进出口", "count": 3, "pct": 7.0}, {"word": "包装材料", "count": 3, "pct": 7.0}, {"word": "技术咨询", "count": 3, "pct": 7.0}, {"word": "电子商务", "count": 3, "pct": 7.0}, {"word": "平台", "count": 3, "pct": 7.0}, {"word": "信息系统", "count": 3, "pct": 7.0}, {"word": "互联网", "count": 3, "pct": 7.0}, {"word": "技术进出口", "count": 3, "pct": 7.0}, {"word": "医疗器械", "count": 3, "pct": 7.0}, {"word": "产品销售", "count": 3, "pct": 7.0}, {"word": "演出", "count": 3, "pct": 7.0}, {"word": "钟表", "count": 3, "pct": 7.0}, {"word": "五金产品", "count": 3, "pct": 7.0}, {"word": "金属制品", "count": 3, "pct": 7.0}, {"word": "电子", "count": 3, "pct": 7.0}, {"word": "咨询服务", "count": 3, "pct": 7.0}, {"word": "家电", "count": 3, "pct": 7.0}, {"word": "代理", "count": 3, "pct": 7.0}];
+const categories = {"产品领域": ["食品饮料", "保健品/健康", "家居/日用品", "化妆品/护肤", "玩具/文创", "珠宝/黄金", "服装/纺织", "餐饮/服务", "户外/运动", "母婴/婴童"], "价值链": ["生产/制造", "零售", "批发/分销"], "市场特征": ["线上/互联网销售", "国际化/出海", "跨境电商"], "战略特征": ["高端/精品定位", "规模经济/大规模", "消费场景多元", "全渠道"], "商业模式": ["研发/技术创新", "品牌运营", "连锁/加盟", "供应链管理"]};
+
+const catColors = {
+    '市场特征': '#c0392b',
+    '商业模式': '#27ae60',
+    '产品领域': '#bbb',
+    '战略特征': '#2d6a9f',
+    '价值链': '#bbb'
+};
+const catClass = {
+    '市场特征': 'cat-market',
+    '商业模式': 'cat-model',
+    '产品领域': 'cat-desc',
+    '战略特征': 'cat-strategy',
+    '价值链': 'cat-desc'
+};
+
+// Build company-tag mapping
+const companyTags = {};
+companies.forEach(function(c) {
+    companyTags[c.name] = [];
+});
+tags.forEach(function(t) {
+    t.companies.forEach(function(tc) {
+        if (companyTags[tc.name]) {
+            companyTags[tc.name].push({
+                label: t.label,
+                category: t.category,
+                keywords: tc.matched_keywords
+            });
+        }
+    });
+});
+
+// Avg tags per company
+const avgTags = Object.values(companyTags).reduce(function(s, v) { return s + v.length; }, 0) / companies.length;
+document.getElementById('avg-tags').textContent = avgTags.toFixed(1);
+
+// === Tab switching ===
+function switchTab(tabId) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+    event.target.classList.add('active');
+    document.getElementById('panel-' + tabId).classList.add('active');
+}
+
+// === Panel 1: Tag Overview ===
+function renderOverview() {
+    var container = document.getElementById('tag-overview');
+    var catGroups = {};
+    tags.forEach(function(t) {
+        if (!catGroups[t.category]) catGroups[t.category] = [];
+        catGroups[t.category].push(t);
+    });
+
+    var html = '';
+    var catOrder = ['市场特征','商业模式','战略特征','产品领域','价值链'];
+    var descCats = ['产品领域', '价值链'];
+    catOrder.forEach(function(cat) {
+        var items = catGroups[cat] || [];
+        if (!items.length) return;
+        var isDesc = descCats.indexOf(cat) >= 0;
+        html += '<div class="category-section">';
+        if (isDesc) {
+            html += '<div class="category-title" style="background:#bbb;color:#666">' + cat + '（' + items.length + '个标签 · 描述性）</div>';
+        } else {
+            html += '<div class="category-title" style="background:' + catColors[cat] + '">' + cat + '（' + items.length + '个标签 · 产业特征）</div>';
+        }
+        html += '<div class="tag-grid">';
+        items.forEach(function(t) {
+            var pct = (t.count / t.total * 100).toFixed(1);
+            var cardClass = isDesc ? 'tag-card desc-tag' : 'tag-card';
+            var countClass = isDesc ? 'tag-count desc' : 'tag-count industry';
+            html += '<div class="' + cardClass + '" onclick="highlightTag(\'' + t.label + '\')">';
+            html += '<div class="tag-label" style="color:' + catColors[t.category] + '">' + t.label + '</div>';
+            html += '<div class="tag-desc">' + t.desc + '</div>';
+            html += '<div class="tag-stats"><div class="' + countClass + '">' + t.count + '家</div><div class="tag-pct">(' + pct + '%)</div></div>';
+            html += '<div class="tag-bar"><div class="tag-bar-fill" style="width:' + pct + '%;background:' + catColors[t.category] + '"></div></div>';
+            html += '<div class="tag-companies">';
+            t.companies.forEach(function(c) {
+                html += '<span>' + c.name + '</span>';
+            });
+            html += '</div>';
+            html += '</div>';
+        });
+        html += '</div></div>';
+    });
+    container.innerHTML = html;
+}
+
+function highlightTag(tagLabel) {
+    document.querySelectorAll('.tag-card').forEach(function(c) { c.classList.remove('highlight'); });
+    document.querySelectorAll('.tag-card').forEach(function(c) {
+        if (c.querySelector('.tag-label').textContent === tagLabel) {
+            c.classList.add('highlight');
+        }
+    });
+}
+
+// === Panel 2: Bar Chart ===
+function renderChart() {
+    var container = document.getElementById('bar-chart');
+    var sorted = tags.slice().sort(function(a, b) { return b.count - a.count; });
+    var maxCount = sorted[0].count;
+
+    var html = '';
+    sorted.forEach(function(t) {
+        var pct = (t.count / t.total * 100).toFixed(1);
+        var width = (t.count / maxCount * 100).toFixed(1);
+        html += '<div class="bar-row">';
+        html += '<div class="bar-label">' + t.label + '</div>';
+        html += '<div class="bar-value">' + t.count + '家</div>';
+        html += '<div class="bar-track"><div class="bar-fill" style="width:' + width + '%;background:' + catColors[t.category] + '"></div></div>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+}
+
+// === Panel 3: Matrix ===
+function renderMatrix(filterCat, searchText) {
+    filterCat = filterCat || 'all';
+    searchText = searchText || '';
+
+    var filteredTags = filterCat === 'all' ? tags : tags.filter(function(t) { return t.category === filterCat; });
+    var filteredCompanies = searchText
+        ? companies.filter(function(c) { return c.name.indexOf(searchText) >= 0 || (c.code && c.code.indexOf(searchText) >= 0); })
+        : companies;
+
+    var wrapper = document.getElementById('matrix-wrapper');
+    var html = '<table class="matrix-table"><thead><tr><th style="min-width:80px">企业</th>';
+    filteredTags.forEach(function(t) {
+        html += '<th title="' + t.desc + '" style="color:' + catColors[t.category] + '">' + t.label + '</th>';
+    });
+    html += '</tr></thead><tbody>';
+
+    filteredCompanies.forEach(function(c) {
+        var ctList = companyTags[c.name] || [];
+        html += '<tr onclick="showCompanyDetail(\'' + c.name + '\')" style="cursor:pointer">';
+        html += '<td class="company-name">' + c.name + '</td>';
+        filteredTags.forEach(function(t) {
+            var match = ctList.find(function(ct) { return ct.label === t.label; });
+            if (match) {
+                html += '<td><div class="matrix-cell cell-on" style="background:' + catColors[t.category] + '" title="' + match.keywords.join(', ') + '"></div></td>';
+            } else {
+                html += '<td><div class="matrix-cell cell-off"></div></td>';
+            }
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    wrapper.innerHTML = html;
+}
+
+function filterMatrix() {
+    var cat = document.getElementById('filter-category').value;
+    var search = document.getElementById('matrix-search').value;
+    renderMatrix(cat, search);
+}
+
+function showCompanyDetail(name) {
+    var c = companies.find(function(x) { return x.name === name; });
+    var ctList = companyTags[name] || [];
+    var panel = document.getElementById('company-detail');
+    panel.style.display = 'block';
+
+    var html = '<div class="detail-name">' + c.name + ' (' + c.code + ')</div>';
+    html += '<div style="font-size:12px;color:#888;margin-top:4px">' + c.wind_ind + ' | ' + c.hs_ind + '</div>';
+    html += '<div class="detail-biz">' + c.main_biz + '</div>';
+    html += '<div class="detail-tags">';
+    ctList.forEach(function(ct) {
+        html += '<div class="detail-tag ' + catClass[ct.category] + '">' + ct.label + ' <small>(' + ct.keywords.join(',') + ')</small></div>';
+    });
+    html += '</div>';
+    panel.innerHTML = html;
+}
+
+// === Panel 4: Word Frequency Table ===
+function renderWordFreq() {
+    var container = document.getElementById('freq-section');
+    var maxCount = wordFreq[0].count;
+
+    var html = '<div class="chart-container"><h3 style="margin-bottom:12px;color:#2d6a9f">高频关键词 Top 80（jieba分词统计）</h3>';
+    html += '<table class="freq-table"><thead><tr><th>#</th><th>关键词</th><th>出现次数</th><th>覆盖企业占比</th><th>频率</th></tr></thead><tbody>';
+    wordFreq.forEach(function(w, i) {
+        var barWidth = Math.round(w.count / maxCount * 200);
+        html += '<tr>';
+        html += '<td>' + (i+1) + '</td>';
+        html += '<td class="freq-word">' + w.word + '</td>';
+        html += '<td>' + w.count + '</td>';
+        html += '<td>' + w.pct + '%</td>';
+        html += '<td><span class="freq-bar" style="width:' + barWidth + 'px"></span></td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
+}
+
+// === Init ===
+renderOverview();
+renderChart();
+renderMatrix();
+renderWordFreq();
+</script>
+
+</body>
+</html>
