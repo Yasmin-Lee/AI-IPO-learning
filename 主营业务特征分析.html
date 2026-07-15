@@ -96,6 +96,22 @@ body { font-family:'Microsoft YaHei','PingFang SC',sans-serif; background:#f5f7f
 .legend { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
 .legend-item { display:flex; align-items:center; gap:4px; font-size:12px; }
 .legend-dot { width:12px; height:12px; border-radius:3px; }
+
+/* --- Keyword Mapping --- */
+.kw-section { background:#fff; border-radius:8px; padding:20px; border:1px solid #dde3ea; margin-bottom:16px; }
+.kw-section-title { font-size:15px; font-weight:700; padding:8px 16px; color:#fff; border-radius:6px; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+.kw-section-title .kw-count { background:rgba(255,255,255,.3); padding:2px 8px; border-radius:4px; font-size:12px; }
+.kw-tag-row { display:flex; align-items:flex-start; gap:8px; margin-bottom:10px; padding:8px 12px; border-radius:6px; border:1px solid #eee; }
+.kw-tag-row.desc-row { background:#f5f5f5; border-color:#ddd; }
+.kw-tag-label { font-size:14px; font-weight:700; min-width:110px; padding-top:2px; }
+.kw-tag-desc { font-size:12px; color:#888; margin-left:4px; }
+.kw-tag-stats { font-size:12px; color:#888; margin-left:8px; white-space:nowrap; }
+.kw-keywords { display:flex; flex-wrap:wrap; gap:4px; }
+.kw-chip { padding:3px 8px; border-radius:4px; font-size:12px; cursor:default; }
+.kw-chip.industry { background:#e8f0f8; color:#2d6a9f; border:1px solid #c4d8e8; }
+.kw-chip.desc { background:#f0f0f0; color:#888; border:1px solid #ddd; }
+.kw-divider { height:1px; background:#dde3ea; margin:8px 0; }
+.kw-note { font-size:11px; color:#888; margin-top:12px; line-height:1.5; padding:8px 12px; background:#f5f7fa; border-radius:6px; }
 </style>
 </head>
 <body>
@@ -118,6 +134,7 @@ body { font-family:'Microsoft YaHei','PingFang SC',sans-serif; background:#f5f7f
 <div class="tab" onclick="switchTab('chart')">频次排行</div>
 <div class="tab" onclick="switchTab('matrix')">企业×标签矩阵</div>
 <div class="tab" onclick="switchTab('wordfreq')">词频表</div>
+<div class="tab" onclick="switchTab('keywordmap')">标签词库</div>
 </div>
 
 <!-- Panel 1: Tag Overview -->
@@ -181,6 +198,11 @@ body { font-family:'Microsoft YaHei','PingFang SC',sans-serif; background:#f5f7f
 <div id="freq-section"></div>
 </div>
 
+<!-- Panel 5: Keyword Mapping -->
+<div class="panel" id="panel-keywordmap">
+<div id="keyword-section"></div>
+</div>
+
 </div>
 
 <script>
@@ -203,6 +225,34 @@ const catClass = {
     '战略特征': 'cat-strategy',
     '价值链': 'cat-desc'
 };
+
+// 24个标签 × 二级关键词映射（即匹配规则）
+const tagKeywordDefs = [
+    {label:'国际化/出海', category:'市场特征', desc:'业务涉及海外市场或跨境经营', keywords:['全球','出口','进出口','国际','海外','跨境','出海','东南亚','越南','泰国','新加坡','印尼','马来西亚','西班牙']},
+    {label:'线上/互联网销售', category:'市场特征', desc:'通过互联网或数字化渠道销售', keywords:['互联网销售','互联网','在线','小程序','平台','数字','数据驱动','电子商务','线上','网上']},
+    {label:'跨境电商', category:'市场特征', desc:'以跨境电商或线上平台为核心渠道', keywords:['电子商务','线上零售','网上经营']},
+    {label:'研发/技术创新', category:'商业模式', desc:'注重研发和技术创新', keywords:['研发','研究','前沿','技术开发','技术开发与技术服务','技术成果','新型']},
+    {label:'品牌运营', category:'商业模式', desc:'以品牌运营和品牌建设为核心', keywords:['品牌','品牌策划','品牌形象','品牌专柜']},
+    {label:'连锁/加盟', category:'商业模式', desc:'采用连锁加盟或门店扩张模式', keywords:['连锁','店铺','分店','零售商','零售店铺']},
+    {label:'供应链管理', category:'商业模式', desc:'强调供应链和物流管理能力', keywords:['供应链','供应链管理','集中采购','配送','物流','存货控制']},
+    {label:'高端/精品定位', category:'战略特征', desc:'定位于高端或精品市场', keywords:['高端','高端美容','精致','独特','优质','出众','领先','最大','第一']},
+    {label:'规模经济/大规模', category:'战略特征', desc:'追求规模经济效应', keywords:['规模','广泛','最大','第一','领先','领导者']},
+    {label:'消费场景多元', category:'战略特征', desc:'覆盖多种消费场景', keywords:['消费场景','生活场景','多生活场景','居家','外出','运动','商务','餐饮','场景']},
+    {label:'全渠道', category:'战略特征', desc:'线上线下多渠道覆盖', keywords:['线上','平台','电子商务','第三方','零售店铺','小程序']},
+    {label:'食品饮料', category:'产品领域', desc:'主营业务涉及食品或饮料', keywords:['食品','饮料','饮品','茶饮','茶饮料','咖啡','酒','水产','纯净水','茶','零食','调味品','预包装食品','冰淇淋','农产品','果饮','椰子水','鱼子酱','鱼糜','菜','果蔬','蔬菜','糕点','糖果','饮用水']},
+    {label:'保健品/健康', category:'产品领域', desc:'涉及保健品或健康相关', keywords:['保健','健康','健身','医疗','护理','药品','中药','营养素']},
+    {label:'化妆品/护肤', category:'产品领域', desc:'涉及化妆品或护肤美容产品', keywords:['化妆品','护肤','彩妆','美容','香水','日用化学','个人护理']},
+    {label:'家居/日用品', category:'产品领域', desc:'涉及家居生活或日用品', keywords:['家居','家居用品','家居香氛','家具','家具销售','家电','家庭','日用','日用品','厨具','厨具卫具','灯具','生活场景']},
+    {label:'玩具/文创', category:'产品领域', desc:'涉及玩具或文创产品', keywords:['玩具','工艺美术','工艺品','拼搭','收藏品','文化','艺术']},
+    {label:'珠宝/黄金', category:'产品领域', desc:'涉及珠宝首饰或贵金属产品', keywords:['珠宝','首饰','黄金','K金','翡翠','钻石','铂金','银','镶嵌','贵金属']},
+    {label:'服装/纺织', category:'产品领域', desc:'涉及服装或纺织品类', keywords:['服装','服饰','纺织','时装','皮革','童装','箱包','鞋帽']},
+    {label:'餐饮/服务', category:'产品领域', desc:'提供餐饮或餐饮相关服务', keywords:['餐饮','餐饮服务','餐饮管理','中式餐饮','外卖','用餐','美食','菜','递送','面']},
+    {label:'户外/运动', category:'产品领域', desc:'涉及户外运动或休闲装备', keywords:['体育用品','钓鱼','帐篷','滑板车','电动自行车','自行车','运动','骑行']},
+    {label:'母婴/婴童', category:'产品领域', desc:'涉及母婴或婴童相关产品/服务', keywords:['母婴','婴童','婴儿','纸尿裤','产后护理','婴幼童']},
+    {label:'生产/制造', category:'价值链', desc:'涉及生产制造环节', keywords:['生产','制造','制造与销售','加工']},
+    {label:'零售', category:'价值链', desc:'涉及终端零售环节', keywords:['零售','零售业务','零售商','零售店铺','零售运营商']},
+    {label:'批发/分销', category:'价值链', desc:'涉及批发分销环节', keywords:['批发','代理']}
+];
 
 // Build company-tag mapping
 const companyTags = {};
@@ -384,11 +434,88 @@ function renderWordFreq() {
     container.innerHTML = html;
 }
 
+// === Panel 5: Keyword Mapping ===
+function renderKeywordMap() {
+    var container = document.getElementById('keyword-section');
+    var descCats = ['产品领域', '价值链'];
+    var catOrder = ['市场特征', '商业模式', '战略特征', '产品领域', '价值链'];
+
+    var catGroups = {};
+    tagKeywordDefs.forEach(function(d) {
+        if (!catGroups[d.category]) catGroups[d.category] = [];
+        catGroups[d.category].push(d);
+    });
+
+    var html = '';
+
+    html += '<div class="kw-note">';
+    html += '<b>标签词库说明：</b>24个特征标签是通过<b>人工定义关键词规则 + 程序自动匹配</b>生成的。<br>';
+    html += '步骤：① jieba中文分词提取高频词 → ② 根据行业认知人工定义标签和二级关键词 → ③ 扫描每家企业主营业务文本，出现任一关键词即归入该标签（每家企业每标签最多计1次）。<br>';
+    html += '以下展示每个标签及其完整的二级关键词列表。<b style="color:#2d6a9f">粗体</b> = 在43家企业中实际触发匹配的词，<span style="color:#aaa;font-style:italic">斜体淡色</span> = 定义了但未触发匹配的词（43家企业文本中未出现）。';
+    html += '</div>';
+
+    var matchedKwMap = {};
+    tags.forEach(function(t) {
+        var allMatched = [];
+        t.companies.forEach(function(c) {
+            c.matched_keywords.forEach(function(kw) {
+                if (allMatched.indexOf(kw) < 0) allMatched.push(kw);
+            });
+        });
+        matchedKwMap[t.label] = allMatched;
+    });
+
+    catOrder.forEach(function(cat) {
+        var items = catGroups[cat] || [];
+        if (!items.length) return;
+        var isDesc = descCats.indexOf(cat) >= 0;
+        var color = catColors[cat];
+
+        html += '<div class="kw-section">';
+        html += '<div class="kw-section-title" style="background:' + color + ';color:' + (isDesc ? '#666' : '#fff') + '">';
+        html += cat + '（' + items.length + '个标签）';
+        if (isDesc) html += ' <span class="kw-count" style="color:#666">描述性 · 灰色</span>';
+        else html += ' <span class="kw-count">产业特征 · 重点关注</span>';
+        html += '</div>';
+
+        items.forEach(function(d) {
+            var matchedKws = matchedKwMap[d.label] || [];
+            var rowClass = isDesc ? 'kw-tag-row desc-row' : 'kw-tag-row';
+            var chipClass = isDesc ? 'kw-chip desc' : 'kw-chip industry';
+
+            var tagObj = tags.find(function(t) { return t.label === d.label; });
+            var countInfo = tagObj ? (tagObj.count + '家 / ' + tagObj.pct + '%') : '--';
+
+            html += '<div class="' + rowClass + '">';
+            html += '<div class="kw-tag-label" style="color:' + color + '">' + d.label + '</div>';
+            html += '<div class="kw-tag-desc">' + d.desc + '</div>';
+            html += '<div class="kw-tag-stats">(' + countInfo + ')</div>';
+            html += '<div style="flex:1"></div>';
+            html += '</div>';
+            html += '<div class="kw-keywords" style="padding-left:12px;margin-bottom:10px">';
+            d.keywords.forEach(function(kw) {
+                var isMatched = matchedKws.indexOf(kw) >= 0;
+                if (isMatched) {
+                    html += '<span class="' + chipClass + '" style="font-weight:700">' + kw + '</span>';
+                } else {
+                    html += '<span class="' + chipClass + '" style="opacity:0.4;font-style:italic">' + kw + '</span>';
+                }
+            });
+            html += '</div>';
+        });
+
+        html += '</div>';
+    });
+
+    container.innerHTML = html;
+}
+
 // === Init ===
 renderOverview();
 renderChart();
 renderMatrix();
 renderWordFreq();
+renderKeywordMap();
 </script>
 
 </body>
